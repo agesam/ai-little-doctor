@@ -344,12 +344,10 @@
     </div>
 
     <script>
-        // API配置
-        const API_CONFIG = {
-            baseURL: "https://openrouter.ai/api/v1",
-            apiKey: "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",
-            model: "deepseek/deepseek-chat-v3.1:free"
-        };
+        // --- 變更開始 ---
+        // 原本的 API_CONFIG 物件（包含 API 密鑰）已被移除，密鑰現在存放在 Netlify 的環境變數中。
+        // 原本的 systemPrompt 也被移除，因為它現在會在 Netlify Functions 中動態生成。
+        // --- 變更結束 ---
         
         // 外部載入的資料
         let externalData = null; 
@@ -529,51 +527,30 @@
         // 生成AI回應
         async function generateAIResponse(message) {
             try {
-                // 構建系統提示，只包含外部資料
-                let systemPrompt = `你是一位名為「早慧AI小博士」的兒童教育專家，專門回答關於海洋寓言、濕地故事、童話故事、魔法故事、阿拉伯童話、古巴比倫神話、古希臘羅馬神話、宗教起源、先秦歷史故事、先秦文學寓言，以及早慧兒童教育中心的相關問題。
-                ，你的知識來源是以下提供的「早慧資料」。
-
-                回答時請嚴格遵守以下規則：
-				1. 量可能只使用繁體中文語言
-                2. 使用友善、生動且適合兒童的，保持回答簡潔有趣，可多用emoji，吸引兒童注意力
-				3. 回答時可以超過但盡可能簡化只用100字內，令閱讀更加方便。
-                4. 優先根據提供的「早慧資料」內容來回答問題。
-				5. 回答有關課程的內容時，必須說明級別，例如：「O2級單元1：聰明烏鴉故事」。
-				6. 回答有關課程的內容時，如果只提供「課」或「級」，會發問要求更多資訊。
-                7. 可以適當擴展知識，但不要偏離核心內容。
-                8. 使用適合兒童理解的詞彙和表達方式。
-                9. 在回答的結尾，請根據用戶的問題內容，禮貌地提示他們可以參考哪一個單元和故事，或相關的學校資訊，
-					例如：「想知道更多關於《禮物大使》的故事，可以參考「O2級單元1：聰明烏鴉故事」的「L02」喔！」
-					如果問題與學校相關，可以提示：「你也可以參考有關早慧兒童教育中心的網站，了解更多喔！」。
-                10. 不要編造或猜測任何資料中沒有的內容。
-				                
-                以下是你的知識庫（JSON 格式）：
-				\n\n早慧資料：\n${JSON.stringify(externalData, null, 2)};\n`
-
-                const response = await fetch(`${API_CONFIG.baseURL}/chat/completions`, {
+                // --- 變更開始 ---
+                // 將 fetch 請求的 URL 改回相對路徑。
+                // 這是為了在 Netlify 上部署時能夠正確呼叫後端函式。
+                // 請注意，在本地環境中執行此檔案可能會出現 "Failed to fetch" 錯誤，因為後端函式並未執行。
+                const response = await fetch('/.netlify/functions/ai-proxy', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${API_CONFIG.apiKey}`
+                        'Content-Type': 'application/json'
                     },
+                    // 將訊息和歷史紀錄打包成 JSON 物件傳送給 Netlify Functions
                     body: JSON.stringify({
-                        model: API_CONFIG.model,
-                        messages: [
-                            { role: "system", content: systemPrompt },                            
-							...conversationHistory  // 使用展開運算符將歷史加入
-                        ],
-                        temperature: 0.7,
-                        max_tokens: 500
+                        message: message,
+                        history: conversationHistory,
+                        externalData: externalData
                     })
-					
                 });
+                // --- 變更結束 ---
                 
                 if (!response.ok) {
                     throw new Error(`API請求失敗: ${response.status} ${response.statusText}`);
                 }
                 
                 const data = await response.json();
-                const aiResponse = data.choices[0].message.content;
+                const aiResponse = data.aiResponse; // 從 Netlify Functions 的回應中獲取 aiResponse
 				
 				 // 新增：將對話紀錄寫入 Firebase Firestore
 				try {

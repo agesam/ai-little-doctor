@@ -1,0 +1,6 @@
+[functions]
+  # Netlify Functions 檔案的存放路徑
+  directory = "netlify-functions"
+  # 你的主網頁檔案
+[build]
+  publish = "."

@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>早慧AI小博士(試用版) - 兒童百科對話系統</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel ="icon" href="photo.ico">
+	<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    
+    <script>
+      const firebaseConfig = {
+		apiKey: "AIzaSyDIPfZNwNHTK6Mbs9-j9ZHg5aJqL1sII-4",
+		authDomain: "ailog-c0a47.firebaseapp.com",
+		projectId: "ailog-c0a47",
+		storageBucket: "ailog-c0a47.firebasestorage.app",
+		messagingSenderId: "561004984761",
+		appId: "1:561004984761:web:46c9398ac5eff00d5a9e68",
+		measurementId: "G-LZTR9JPNWS"
+      };
+
+      // 初始化 Firebase
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+    </script>
+    
+	<style>
+        /* 配色方案與整體樣式 */
+        :root {
+            --primary-color: #13a0c6; /* 藍綠色 */
+            --secondary-color: #84c442; /* 綠色 */
+            --background-start: #e0f5f9; /* 淺藍綠 */
+            --background-end: #f0f8e9; /* 淺綠 */
+            --text-color: #333;
+            --user-bubble: #a3d865; /* 亮綠色 */
+            --bot-bubble: #e0f5f9; /* 淺藍綠 */
+            --loading-color: #ff9800; /* 橘色 */
+            --error-color: #d32f2f; /* 紅色 */
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--background-start) 0%, var(--background-end) 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: var(--text-color);
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background-color: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            margin-top: 20px;
+        }
+        
+        /* 標題區塊 */
+        header {
+            background: linear-gradient(90deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header-wave {
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 100%;
+            height: 15px;
+            background: white;
+            border-radius: 50% 50% 0 0;
+        }
+        
+        /* 學校 Logo 圖片樣式 */
+        .logo {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .logo img {
+            width: 80px; /* 圖片寬度 */
+            height: auto;
+        }
+        
+        .logo-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+        
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 5px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        /* 聊天區塊樣式 */
+        .chat-container {
+            height: 400px;
+            overflow-y: auto;
+            padding: 20px;
+            background: #fafafa;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .message {
+            max-width: 85%;
+            padding: 15px 20px;
+            border-radius: 25px;
+            animation: fadeIn 0.4s ease;
+            position: relative;
+            line-height: 1.5;
+            word-wrap: break-word; /* 確保長文字會換行 */
+        }
+
+        .message img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+        
+        /* 聊天氣泡動畫 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .bot-message {
+            background-color: var(--bot-bubble);
+            border-bottom-left-radius: 4px;
+            align-self: flex-start;
+        }
+        
+        .user-message {
+            background-color: var(--user-bubble);
+            color: var(--text-color);
+            border-bottom-right-radius: 4px;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+        
+        .input-container {
+            display: flex;
+            padding: 15px;
+            border-top: 1px solid #e0e0e0;
+            background: white;
+            align-items: center;
+        }
+        
+        input {
+            flex: 1;
+            padding: 12px 18px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        
+        input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 5px rgba(19, 160, 198, 0.3);
+        }
+        
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            margin-left: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        button:hover {
+            background-color: #0b7f9b;
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            background-color: #b0e8f2;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        /* 正在輸入的指示器 */
+        .typing-indicator {
+            display: inline-flex;
+            padding: 12px 16px;
+            background-color: var(--bot-bubble);
+            border-radius: 25px;
+            border-bottom-left-radius: 4px;
+        }
+        
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--primary-color);
+            border-radius: 50%;
+            margin: 0 3px;
+            animation: typingAnimation 1.4s infinite ease-in-out;
+        }
+        
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes typingAnimation {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+            30% {
+                transform: translateY(-5px);
+            }
+        }
+        
+        .error {
+            color: #d32f2f;
+            background-color: #ffcdd2;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .loading-message {
+            text-align: center;
+            font-size: 1rem;
+            color: var(--loading-color);
+            padding: 10px;
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+        
+        .material-icon {
+            font-size: 1.2rem;
+            margin-right: 5px;
+        }
+        
+        .footer {
+            margin-top: 15px;
+            text-align: center;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* 通知樣式 */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-weight: bold;
+            color: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.5s ease-in-out;
+            z-index: 1000;
+        }
+
+        .notification.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background-color: #4CAF50; /* Green */
+        }
+
+        .notification.error {
+            background-color: var(--error-color); /* Red */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <!-- 如果圖片不存在，顯示備用圖示 -->
+                <img src="Dove_logo_colour-01.png" alt="早慧兒童教育中心 Logo" onerror="this.style.display='none'; document.getElementById('logoIcon').style.display='block';">
+                <i id="logoIcon" class="fas fa-school logo-icon" style="display:none;"></i>
+            </div>
+            <h1>早慧AI小博士（試用版)</h1>
+            <div class="subtitle">專屬兒童的學習助手</div>
+            <div class="header-wave"></div>
+        </header>
+        
+        <div class="chat-container" id="chatContainer">
+            <div class="loading-message" id="loadingMessage">正在載入資料...請稍候...</div>
+        </div>
+        
+        
+        <div class="input-container">
+            <input type="text" id="userInput" placeholder="輸入你的問題..." onkeypress="handleKeyPress(event)" disabled>
+            <button id="sendButton" onclick="sendMessage()" disabled><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <!-- 通知區塊 -->
+    <div id="notification" class="notification"></div>
+
+    <div class="footer">
+        <p>早慧AI小博士 - 專為兒童設計的學習助手 | 使用 OpenRouter AI 技術</p>
+    </div>
+
+    <script>
+        // API配置
+        const API_CONFIG = {
+            baseURL: "https://openrouter.ai/api/v1",
+            apiKey: "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",
+            model: "deepseek/deepseek-chat-v3.1:free"
+        };
+        
+        // 外部載入的資料
+        let externalData = null; 
+
+        const chatContainer = document.getElementById('chatContainer');
+        const userInput = document.getElementById('userInput');
+        const sendButton = document.getElementById('sendButton');
+        const loadingMessage = document.getElementById('loadingMessage');
+        const notificationElement = document.getElementById('notification');
+        
+        // 新增：對話歷史陣列
+		let conversationHistory = [];
+		
+		const MAX_HISTORY_LENGTH = 5; // 保留最近的 5 輪對話 (5 組使用者 + 5 組 AI 回應)
+
+		// 頁面載入時執行
+        window.onload = async function() {
+            try {
+                // 嘗試載入外部資料
+                externalData = await loadExternalData();
+                loadingMessage.style.display = 'none';
+                userInput.disabled = false;
+                sendButton.disabled = false;
+                showNotification('資料載入成功！', 'success');
+                addWelcomeMessage();
+                
+            } catch (error) {
+                console.error("載入資料失敗:", error);
+                loadingMessage.innerHTML = `<span style="color:var(--error-color);">載入資料失敗。</span><br>錯誤：${error.message}`;
+                loadingMessage.style.color = 'var(--error-color)';
+                showNotification('資料載入失敗！', 'error');
+                addWelcomeMessage();
+            }
+        };
+
+        // 載入外部資料函式，使用動態代理 URL
+		async function loadExternalData() {
+			// 將這裡替換成你在 google sheets 得到的 API URL
+			const apiURL = 'https://script.google.com/macros/s/AKfycbw1D1AKlVr_iaArk-JkxN0YZ-NjyyxMgH-h-CatrFrprJXaSSxSsc2YZROaBxapPTEZeg/exec'; 
+
+			try {
+			const response = await fetch(apiURL);
+			if (!response.ok) {
+				throw new Error(`HTTP error! 狀態碼: ${response.status} (${response.statusText})`);
+			}
+			const allSheetsData = await response.json(); 
+			
+			// 這裡可以處理所有工作表的資料
+			let combinedData = [];
+			for (const sheetName in allSheetsData) {
+				if (Object.prototype.hasOwnProperty.call(allSheetsData, sheetName)) {
+					combinedData = combinedData.concat(allSheetsData[sheetName]);
+				}
+			}
+			
+			// 將處理後的資料儲存到全域變數中
+			externalData = combinedData;
+            return combinedData;
+
+			} catch (error) {
+				console.error('載入資料時發生錯誤:', error);
+				throw error;
+			}
+		}
+        
+        // 顯示通知訊息
+        function showNotification(message, type) {
+            notificationElement.textContent = message;
+            notificationElement.className = `notification show ${type}`;
+            setTimeout(() => {
+                notificationElement.classList.remove('show');
+            }, 3000); // 3秒後消失
+        }
+
+        // 歡迎訊息
+        function addWelcomeMessage() {
+            const welcomeMessage = `
+                你好！👋 我是早慧AI小博士🧠✨，很高興為你解答問題！🎉<br>
+                你可以問我任何關於早慧兒童教育中心的問題喔！🏫📚<br>
+				我會跟你分享許多有趣的知識！🤓💡<br><br>
+				需要我幫你做什麼呢？😃<br>
+				<b>「現時資料庫有學校資料與時間表，O1及O2的故事資料，但都可以測試資料庫外資訊。」</b>
+            `;
+            addBotMessage(welcomeMessage);
+        }
+        
+        // 處理按鍵事件
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+        
+        // 發送訊息
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (message === '' || externalData === null) return;
+            
+            addUserMessage(message);
+            
+			// 新增：將使用者訊息新增到對話歷史中
+			conversationHistory.push({ role: "user", content: message });
+			
+			 // 新增：檢查對話歷史長度，如果超過限制則刪除最舊的訊息
+			if (conversationHistory.length > MAX_HISTORY_LENGTH * 2) {
+				// * 2 是因為每一輪對話包含一個使用者訊息和一個 AI 訊息
+				conversationHistory.splice(0, conversationHistory.length - MAX_HISTORY_LENGTH * 2);
+			}
+						
+			userInput.value = '';
+            sendButton.disabled = true;			
+            
+            // 顯示輸入指示器
+            showTypingIndicator();
+            
+            try {
+                await generateAIResponse(message);
+            } catch (error) {
+                console.error("API請求錯誤:", error);
+                removeTypingIndicator();
+                addBotMessage("抱歉，我遇到了一些技術問題。請稍後再試！", true);
+            } finally {
+                sendButton.disabled = false;
+            }
+        }
+        
+        // 添加用戶訊息
+        function addUserMessage(message) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', 'user-message');
+            messageElement.textContent = message;
+            chatContainer.appendChild(messageElement);
+            scrollToBottom();
+        }
+        
+        // 添加機器人訊息
+        function addBotMessage(message, isError = false) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', 'bot-message');
+            if (isError) {
+                messageElement.classList.add('error');
+            }
+            messageElement.innerHTML = message;
+            chatContainer.appendChild(messageElement);
+            scrollToBottom();
+        }
+        
+        // 顯示輸入指示器
+        function showTypingIndicator() {
+            const indicator = document.createElement('div');
+            indicator.classList.add('message', 'bot-message', 'typing-indicator');
+            indicator.id = 'typingIndicator';
+            
+            for (let i = 0; i < 3; i++) {
+                const dot = document.createElement('div');
+                dot.classList.add('typing-dot');
+                indicator.appendChild(dot);
+            }
+            
+            chatContainer.appendChild(indicator);
+            scrollToBottom();
+        }
+        
+        // 移除輸入指示器
+        function removeTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+        
+        // 滾動到底部
+        function scrollToBottom() {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        
+        // 生成AI回應
+        async function generateAIResponse(message) {
+            try {
+                // 構建系統提示，只包含外部資料
+                let systemPrompt = `你是一位名為「早慧AI小博士」的兒童教育專家，專門回答關於海洋寓言、濕地故事、童話故事、魔法故事、阿拉伯童話、古巴比倫神話、古希臘羅馬神話、宗教起源、先秦歷史故事、先秦文學寓言，以及早慧兒童教育中心的相關問題。
+                ，你的知識來源是以下提供的「早慧資料」。
+
+                回答時請嚴格遵守以下規則：
+				1. 量可能只使用繁體中文語言
+                2. 使用友善、生動且適合兒童的，保持回答簡潔有趣，可多用emoji，吸引兒童注意力
+				3. 回答時可以超過但盡可能簡化只用100字內，令閱讀更加方便。
+                4. 優先根據提供的「早慧資料」內容來回答問題。
+				5. 回答有關課程的內容時，必須說明級別，例如：「O2級單元1：聰明烏鴉故事」。
+				6. 回答有關課程的內容時，如果只提供「課」或「級」，會發問要求更多資訊。
+                7. 可以適當擴展知識，但不要偏離核心內容。
+                8. 使用適合兒童理解的詞彙和表達方式。
+                9. 在回答的結尾，請根據用戶的問題內容，禮貌地提示他們可以參考哪一個單元和故事，或相關的學校資訊，
+					例如：「想知道更多關於《禮物大使》的故事，可以參考「O2級單元1：聰明烏鴉故事」的「L02」喔！」
+					如果問題與學校相關，可以提示：「你也可以參考有關早慧兒童教育中心的網站，了解更多喔！」。
+                10. 不要編造或猜測任何資料中沒有的內容。
+				                
+                以下是你的知識庫（JSON 格式）：
+				\n\n早慧資料：\n${JSON.stringify(externalData, null, 2)};\n`
+
+                const response = await fetch(`${API_CONFIG.baseURL}/chat/completions`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_CONFIG.apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: API_CONFIG.model,
+                        messages: [
+                            { role: "system", content: systemPrompt },                            
+							...conversationHistory  // 使用展開運算符將歷史加入
+                        ],
+                        temperature: 0.7,
+                        max_tokens: 500
+                    })
+					
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API請求失敗: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                const aiResponse = data.choices[0].message.content;
+				
+				 // 新增：將對話紀錄寫入 Firebase Firestore
+				try {
+					await db.collection("conversations").add({
+						user_message: message,
+						ai_response: aiResponse,
+						timestamp: firebase.firestore.FieldValue.serverTimestamp() // 使用伺服器時間戳
+					});
+					console.log("對話已成功記錄到 Firestore。");
+				} catch (dbError) {
+					console.error("寫入 Firestore 錯誤:", dbError);
+				}
+				
+				// 新增：將AI的回應也加入對話歷史
+				conversationHistory.push({ role: "assistant", content: aiResponse });
+				
+				// 新增：再次檢查對話歷史長度，如果超過限制則刪除最舊的訊息
+				if (conversationHistory.length > MAX_HISTORY_LENGTH * 2) {
+					conversationHistory.splice(0, conversationHistory.length - MAX_HISTORY_LENGTH * 2);
+				}				
+			               
+                removeTypingIndicator();
+                // 檢查 AI 回應是否為空或只有空格
+                if (!aiResponse || aiResponse.trim() === '') {
+                    addBotMessage("🙇✨ 抱歉，現在小博士在幫助其他小朋友～👧👦🎨請換個方式再問我一次，或稍後再試試看！🔄⏳");
+                } else {
+                    addBotMessage(aiResponse);
+                }
+
+            } catch (error) {
+                console.error("API請求錯誤:", error);
+                removeTypingIndicator();
+                
+                // 備用回應 - 當API失敗時使用本地回應
+                const localResponse = generateLocalResponse(message);
+                addBotMessage(localResponse);
+            }
+        }
+        
+        // 生成本地回應（當API不可用時）
+        function generateLocalResponse(message) {
+            return `🙇‍♂️✨ 很抱歉，小博士今天要休息了，無法回答你的問題。🛠️🚧請明天稍後再試！⏳🙏`;
+        }
+    </script>
+</body>
+</html>
